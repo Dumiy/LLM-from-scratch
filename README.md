@@ -6,13 +6,21 @@ A guided relearning path back to ML/AI engineering fundamentals — for an engin
 
 Refresh and rebuild core ML Engineer / Researcher skills: math foundations, classical ML, neural network internals, and modern deep learning, culminating in implementing a language model from the ground up.
 
+## Goal
+
+Hopefully build a state-of-the-art LLM.
+
+## Collaboration
+
+Built with [Claude Code](https://claude.com/claude-code) as a learning assistant — pairing on chapter planning, explanations, and code review throughout the journey.
+
 ## Status
 
 Setup phase. Chapters are being added incrementally as the journey is mapped out.
 
 ## Chapters
 
-Coming soon — chapters will be added here as a step-by-step curriculum.
+1. [The Transformer](chapters/chapter-1-transformer/transformer.ipynb) — build an encoder-decoder transformer from raw PyTorch ops.
 
 ## How to use this repo
 
