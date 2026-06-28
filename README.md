@@ -22,6 +22,9 @@ Setup phase. Chapters are being added incrementally as the journey is mapped out
 
 1. [The Transformer](chapters/chapter-1-transformer/transformer.ipynb) — build an encoder-decoder transformer from raw PyTorch ops.
 2. [Training a Decoder-Only Model](chapters/chapter-2-decoder-llm/gpt.ipynb) — build a GPT-style model and actually train it on TinyStories.
+3. Instruction Model — scale the toy GPT into a real base, then fine-tune it into a chat model.
+   - [3a · Pretraining a Base Model](chapters/chapter-3-instruction-model/3a-pretrain.ipynb) — a ~50M GPT on streamed FineWeb-Edu: on-disk token cache, mixed precision, LR schedule, checkpoint/resume, and the training-speed stack (`torch.compile`, prefetching, TF32).
+   - [3b · Supervised Fine-Tuning](chapters/chapter-3-instruction-model/3b-sft.ipynb) — turn the base into a chat model on Dolly-15k: chat templates, loss masking, padding, and chat-style generation.
 
 ## How to use this repo
 
