@@ -105,6 +105,28 @@ Plus a **broader data mixture** (§7): per-source uint16 caches (FineWeb web 0.4
 
 **Editing note for ch4:** the architecture pieces (RoPE/RMSNorm/SwiGLU/GQA/mixture loader) are the TODOs; the block/model/KV-cache-generate/train-loop/A-B are *given*. Reference solutions were written + run in a throwaway scratchpad script this session to confirm the checks pass — deliberately **not** committed (would spoil the TODO learning pattern). The notebook ships stubs only.
 
+## What's done — Chapter 5: Function-Calling / Tool Use
+
+`chapters/chapter-5-function-calling/tools.ipynb` (25 cells, authored this session). **User chose this** (over multilingual/scale/DPO) as the agentic end-goal milestone. The framing that ties the whole project together: a ~50M model can't be a knowledge store (the recurring "France→Germany" failure), so stop trying — teach it to **call a tool** that knows, with the tools supplied in the prompt so the skill generalizes.
+
+SFTs the **Ch.4 modern base** (`modern.pt`) on **real** data: `Salesforce/xlam-function-calling-60k` (the user explicitly chose real data over a synthetic toolset). Each xLAM row = `query` + `tools` (JSON list) + `answers` (JSON call list). New TODOs (concept→TODO→check):
+- `format_example` — Alpaca-style template extended with a `### Tools:` block; response = the `answers` JSON.
+- `encode_example` — 3b-style loss masking, train only on the call+EOT.
+- `parse_and_execute` — extract the first balanced JSON from model output, dispatch to real Python tool fns (defensive: handles single-dict calls, unknown tools, non-JSON → error, never crashes).
+- `chat_with_tools` — the agentic loop: prompt → generate call → parse → execute → grounded result.
+
+Given: the full Ch.4 LlamaGPT stack (reproduced so it stands alone) + KV-cache `generate`, `collate`, the instrumented `sft_train`, the real tool implementations (`search` over a tiny fact dict, `calculator` via safe `ast` eval, `get_weather` stub) + `TOOL_SCHEMAS`. Loads `modern.pt` → writes `data/toolcaller.pt`.
+
+**Key technical decisions baked in (don't relitigate):**
+- **Real data = xLAM-60k** (clean: query/tools/answers fields). Single-turn (call only, no answer-narration). Glaive-function-calling-v2 is the noted scale-up for the multi-turn "feed result back → narrate" loop.
+- **Tools-in-prompt → generalization:** the model learns the skill "read offered tools, pick + fill the call", not memorized tools — why a tiny model can do it at all. Important teaching point.
+- **block_size 256 → 512 via RoPE, for free:** function-calling prompts are long. We load `modern.pt` rebuilt at `block_size=512` — and because Ch.4 dropped the learned position table for RoPE, **no positional param needs resizing**; the weights load unchanged and RoPE extrapolates. Validated (state_dict keys match across block_size; runs at len>trained). This is a concrete callback to Ch.4's RoPE benefit.
+- Low LR 2e-5, 2 epochs (same gentle-SFT reasoning as 3b).
+
+**Verified this session:** all checks pass with reference solutions (throwaway `validate_ch5.py`, not committed) — format/encode/collate, `parse_and_execute` (real calc=44.1, search grounds "Paris", single-dict + non-JSON handled), and the block_size-extension load test.
+
+**Status:** authored + internally verified, **not yet run by the user** (no `toolcaller.pt`). Needs `modern.pt` from Ch.4 (exists — Ch.4 was run, val MA-loss ~3.7). Honest expectation: at 50M the win is *parseable schema-matching JSON calls*; tool choice/args will be imperfect (defensive parser handles it). Built via stdlib-json builder + cell-id pass; validated with `nbformat`.
+
 ## Dataset research (done, not yet acted on)
 
 Researched what it'd take to train locally toward: multilingual + function-calling/agentic capability. Full writeup is in conversation history; summary:
