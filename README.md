@@ -21,6 +21,7 @@ Setup phase. Chapters are being added incrementally as the journey is mapped out
 ## Chapters
 
 1. [The Transformer](chapters/chapter-1-transformer/transformer.ipynb) — build an encoder-decoder transformer from raw PyTorch ops.
+2. [Training a Decoder-Only Model](chapters/chapter-2-decoder-llm/gpt.ipynb) — build a GPT-style model and actually train it on TinyStories.
 
 ## How to use this repo
 

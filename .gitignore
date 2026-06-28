@@ -1,0 +1,33 @@
+# ── Model weights, checkpoints, token caches (large binaries — never commit) ──
+*.pt
+*.pth
+*.bin
+*.safetensors
+*.ckpt
+*.gguf
+*.onnx
+*.npy
+*.npz
+
+# Per-chapter data/checkpoint dirs (token caches, base.pt, chat.pt, ...)
+data/
+**/data/
+checkpoints/
+**/checkpoints/
+
+# ── Python ──
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# ── Jupyter ──
+.ipynb_checkpoints/
+
+# ── OS / editor cruft ──
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

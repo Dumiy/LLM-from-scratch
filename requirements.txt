@@ -1,3 +1,10 @@
 --extra-index-url https://download.pytorch.org/whl/cu132
 torch>=2.6
 jupyter>=1.0
+datasets>=3.5
+tiktoken>=0.9
+matplotlib>=3.9
+tqdm>=4.66
+# Optional: enables torch.compile on Windows (Triton isn't bundled with PyTorch on win32).
+# Linux users already get triton via the torch wheel, so this line is Windows-only.
+triton-windows>=3.0 ; platform_system == "Windows"
