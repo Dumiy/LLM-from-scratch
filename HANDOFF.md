@@ -83,6 +83,28 @@ The 3a training loop was upgraded well past the original stub. What's in it now:
 
 **Editing note:** this session edited via live `NotebookEdit` successfully (the old stale-open-tab gotcha didn't bite, but the tool did once report "file modified since read" — re-Read before editing if that happens). `NotebookEdit` markdown cells must contain real newlines, not literal `\n`.
 
+## What's done — Chapter 4: Modern Architecture + broader data
+
+`chapters/chapter-4-modern-architecture/llama.ipynb` (31 cells, authored this session). **Decided by the user after seeing 3b's output** (SFT worked — format+stop learned — but the base is knowledge-poor: "capital of France" → "Germany", plus repetition loops). User's call: don't paper over it downstream; fix the base via a better architecture + broader data. Same concept→TODO→check pattern, full explanatory depth.
+
+Rebuilds the Ch.2/3 GPT-2-style model into a **Llama-style** decoder. The five architecture changes (each a TODO with deep "what/why/benefit" markdown):
+- **RoPE** (rotary position) replaces learned absolute `wpe` — relative, length-extrapolating, zero-param. TODOs: `precompute_rope`, `rotate_half`, `apply_rope`.
+- **RMSNorm** replaces LayerNorm — scale-only, no mean-centering, no bias.
+- **SwiGLU** replaces GELU MLP — gated; `d_ff=1408 ≈ 8/3·d_model` keeps params equal (3 matrices vs 2).
+- **GQA** (`n_kv_heads=2`, 8 query heads) replaces MHA — 4× smaller KV cache. Includes `repeat_kv`.
+- **No biases** anywhere.
+- **KV-cache `generate`** (given) — O(N) not O(N²) decoding; the payoff of GQA.
+
+Plus a **broader data mixture** (§7): per-source uint16 caches (FineWeb web 0.45 / FineWeb-Edu 0.35 / the-stack-smol code 0.20) + a weighted `mixture_get_batch` (TODO). Note: this is the **multilingual on-ramp** — swap sources for language slices, same loader. §8 trains the modern model (reuses 3a's instrumented loop, given) and **A/Bs against `base.pt`** via a compact `OldGPT` loader.
+
+**Verified this session:** all 7 checks pass with reference solutions (ran a validation script with the TODOs filled in) — RoPE norm+relative property, RMSNorm, SwiGLU param parity, GQA shapes, model builds at **48.3M params** (vs 51.1M base — comparable) with fresh loss ~10.9 ≈ ln(V), **KV-cache generation bit-identical to uncached**, mixture batches. So the chapter is internally consistent; the TODO stubs are correct-by-construction.
+
+**Reference Config:** `d_model=512, n_heads=8, n_kv_heads=2, d_ff=1408, n_layers=8, block_size=256, rope_theta=10000`. block_size kept at 256 (same as base) for a clean A/B — RoPE *enables* longer but we don't use it, to isolate the comparison to architecture+data.
+
+**Status:** notebook authored + internally verified, **not yet run by the user** (no `modern.pt`, no mixture caches built — the FineWeb/the-stack streaming+tokenize is the slow one-time part). TODOs are stubs for the user to implement. Built via a stdlib-json builder script (`scratchpad/build_ch4.py`) + a normalize pass to add cell ids; validated with `nbformat`.
+
+**Editing note for ch4:** the architecture pieces (RoPE/RMSNorm/SwiGLU/GQA/mixture loader) are the TODOs; the block/model/KV-cache-generate/train-loop/A-B are *given*. Reference solutions were written + run in a throwaway scratchpad script this session to confirm the checks pass — deliberately **not** committed (would spoil the TODO learning pattern). The notebook ships stubs only.
+
 ## Dataset research (done, not yet acted on)
 
 Researched what it'd take to train locally toward: multilingual + function-calling/agentic capability. Full writeup is in conversation history; summary:
