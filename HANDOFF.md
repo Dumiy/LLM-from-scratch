@@ -127,6 +127,27 @@ Given: the full Ch.4 LlamaGPT stack (reproduced so it stands alone) + KV-cache `
 
 **Status:** authored + internally verified, **not yet run by the user** (no `toolcaller.pt`). Needs `modern.pt` from Ch.4 (exists — Ch.4 was run, val MA-loss ~3.7). Honest expectation: at 50M the win is *parseable schema-matching JSON calls*; tool choice/args will be imperfect (defensive parser handles it). Built via stdlib-json builder + cell-id pass; validated with `nbformat`.
 
+## What's done — Chapter 6: Mixture-of-Experts (+ 2024 refinements)
+
+`chapters/chapter-6-mixture-of-experts/moe.ipynb` (25 cells, authored this session). **User chose "more up-to-date architecture"** over multilingual/scale/RAG. Takes the Ch.4 dense Llama (2023) to the **2024-25 frontier**: the headline is going **sparse** with MoE — the shift shared by DeepSeek-V3, Llama-4, Qwen3, Mixtral, GPT-OSS.
+
+The one idea: **MoE decouples params from compute** — N expert MLPs per layer, router sends each token to top-k, so capacity (params) grows while compute/token stays ~flat. New TODOs (concept→TODO→check):
+- `top_k_gating(router_logits, top_k)` — top-k experts + softmax over the chosen k.
+- `load_balance_loss(router_logits, expert_idx, n_experts)` — Switch-style aux loss (`n_experts * Σ f_i·P_i`); ~1.0 when balanced, up to n_experts when collapsed. **The thing that makes MoE train** (stops router collapse).
+- `apply_qk_norm(q, k, q_norm, k_norm)` — QK-Norm (RMSNorm on q,k before RoPE), a 2024 stability standard.
+
+Given: Ch.4 dense pieces (RoPE/RMSNorm/SwiGLU-as-expert/repeat_kv), the `MoE` layer (per-expert dispatch loop using the two TODOs + a `tok_per_expert` utilization buffer), `Attention` with QK-Norm, `MoEBlock`/`MoEGPT` (forward returns `(logits, loss, aux)`; training adds `aux_coef*aux`), KV-cache `generate`. Reuses any existing token cache from a prior chapter (no new download). Writes `data/moe.pt`. Ends with a concept-only §7 on the rest of the frontier: **MLA** (DeepSeek latent-attention KV compression below GQA), fine-grained + shared experts, sliding-window attention, logit soft-capping.
+
+**Config:** `n_experts=8, top_k=2, moe_d_ff=768, aux_coef=0.01, use_qk_norm=True` (+ the Ch.4 fields). At these settings the model is ~80M **total** / ~38M **active per token** — the sparsity is the whole demo.
+
+**Honest caveat baked in:** at ~50M-class / 8GB a small MoE will NOT beat dense on quality (MoE pays off at scale). The chapter teaches the *mechanism* and *measures* it: total params up, active/token flat, and an **expert-utilization histogram** showing the load-balance loss working (flat bars = balanced; towering bars = collapse → raise `aux_coef`).
+
+**Verified this session:** all 6 checks pass with reference solutions (throwaway `validate_ch6.py`, not committed) — gating (weights sum to 1, picks argmax), aux (balanced≈1.0 vs collapsed≈4.0), QK-norm (per-head RMS≈1), MoE sparsity (9.4M total experts / 2.4M active), full model builds (66M total / 38M active at the small validation cfg, loss≈10.9≈ln(V), aux≈1.1, KV-cache generation works).
+
+**Status:** authored + internally verified, **not yet run by the user** (no `moe.pt`). Needs only an existing token cache (3a/4 already built several). Built via stdlib-json builder + cell-id pass; nbformat-validated.
+
+**Note on `torch.compile` for MoE:** left OFF in the run cell — the per-expert dispatch loop is data-dependent (`nonzero`/`index_add_`) so compile/inductor helps little and can graph-break. Dense chapters keep compile on; MoE doesn't.
+
 ## Dataset research (done, not yet acted on)
 
 Researched what it'd take to train locally toward: multilingual + function-calling/agentic capability. Full writeup is in conversation history; summary:

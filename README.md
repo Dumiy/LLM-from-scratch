@@ -27,6 +27,7 @@ Setup phase. Chapters are being added incrementally as the journey is mapped out
    - [3b · Supervised Fine-Tuning](chapters/chapter-3-instruction-model/3b-sft.ipynb) — turn the base into a chat model on Dolly-15k: chat templates, loss masking, padding, and chat-style generation.
 4. [A Modern Architecture + Broader Data](chapters/chapter-4-modern-architecture/llama.ipynb) — rebuild the GPT-2-style model into a Llama-style decoder (RoPE, RMSNorm, SwiGLU, grouped-query attention, KV-cache generation), pretrain it on a source mixture (web + educational + code), and A/B it against the Chapter 3 base.
 5. [Function-Calling / Tool Use](chapters/chapter-5-function-calling/tools.ipynb) — SFT the modern base on real function-calling data (xLAM-60k) so it emits structured tool calls instead of hallucinating facts, then parse and execute them: tools-in-prompt schemas, JSON responses, loss masking, and the agentic call→execute loop.
+6. [Mixture-of-Experts](chapters/chapter-6-mixture-of-experts/moe.ipynb) — go sparse, the defining 2024-25 frontier shift: replace the dense MLP with routed expert MLPs (router, top-k gating, load-balancing loss) plus QK-Norm, decoupling parameters from compute-per-token. MLA and other frontier tricks covered as concept.
 
 ## How to use this repo
 
