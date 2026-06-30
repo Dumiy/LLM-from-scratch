@@ -14,6 +14,21 @@ Relearn ML/AI fundamentals from first principles, building toward an LLM from sc
 - 8GB VRAM is the binding constraint going forward — expect to need LoRA/QLoRA, gradient checkpointing, and/or small model sizes (tens to low hundreds of millions of params) for anything beyond toy runs.
 - Storage: ~300GB usable on disk. FineWeb-2/CulturaX/MADLAD-400 are multi-TB datasets in full — never download them whole. Budget: ~6-8 languages × ~2B tokens each ≈ 50-80GB raw text (1 token ≈ 4 bytes). Pull only the per-language subset (e.g. `fra_Latn`, `deu_Latn`) via `streaming=True`, stop at the token budget, tokenize to binary, then delete the raw text shards.
 
+## Shared code — the `llmscratch` package (refactor, this session)
+
+**Why:** every chapter after Ch.4 was re-pasting the same ~80-line Llama model + data utils as "given" code. The copies **drifted** — Ch.7's copy used short module names (`n1/at/n2/m`) while Ch.4 saved checkpoints with `attn_norm/attn/mlp_norm/mlp`, so `modern.pt` failed to `load_state_dict`. Fixed at the root by extracting one source of truth.
+
+**Structure** (repo root):
+- `llmscratch/model.py` — the settled Ch.4 Llama stack: `Config`, RoPE fns, `RMSNorm`, `GroupedQueryAttention` (cache-capable), `SwiGLU`, `LlamaBlock`, `LlamaGPT`, KV-cache `generate`. **Param names match exactly what Ch.4/5 saved**, so `modern.pt` loads with `strict=True` (verified: 48.3M).
+- `llmscratch/data.py` — `build_token_cache`, `get_batch(data, block, batch, device)`, `BatchPrefetcher`, `mixture_get_batch`.
+- `llmscratch/__init__.py` re-exports; `pyproject.toml` enables `pip install -e .`.
+
+**Usage in notebooks:** a robust import cell — `try: from llmscratch.model import ...` except `ModuleNotFoundError`: walk `cwd` up to the dir containing `llmscratch/`, add to `sys.path`, retry. Works with OR without the editable install. **Importing `Config` into the notebook namespace also lets the pickled cfg in `*.pt` unpickle** (`torch.load` looks for `__main__.Config`).
+
+**Policy (don't violate):** the package holds **settled / already-taught** components for *reuse*. Chapters that *teach* a component keep implementing it inline as a `TODO` (Ch.4 RoPE/RMSNorm/etc., Ch.6 MoE) — do NOT replace those with imports or you spoil the lesson. The package **grows as concepts settle**: e.g. Ch.7's eval primitives (`evaluate_perplexity`, `choice_loglikelihood`, `filter_logits`) should be added to a `llmscratch/evals.py` once Ch.7 has taught them, so Ch.8+ import them.
+
+**Migration status:** Ch.7 now imports from `llmscratch` (this is what fixed its load bug). Ch.1-6 are **left as-is** — they're the teaching chapters (intentional inline reproduction) and are already run with outputs; migrating them is optional and would churn their outputs. New chapters (8-10) should import the given parts from `llmscratch`.
+
 ## What's done — Chapter 1: The Transformer
 
 `chapters/chapter-1-transformer/transformer.ipynb` — an encoder-decoder transformer built from raw PyTorch tensor ops (no `nn.Transformer`/`nn.MultiheadAttention`). Structured as 8 phases, each: concept explanation (with worked numeric examples, analogies, ASCII diagrams) → `TODO` stub → self-check assertion cell. The user implemented all 8 phases themselves; all checks pass:
@@ -158,7 +173,7 @@ When asked what Ch.7 should be, the user picked **all four** remaining topics. T
 
 ## What's done — Chapter 7: Evaluation + decoding
 
-`chapters/chapter-7-evaluation/evaluation.ipynb` (17 cells, authored this session). The "stop eyeballing, start measuring" chapter — foundation for the rest of the arc. Loads the Ch.4 `modern.pt` (LlamaGPT reproduced given, now WITH a 0.02 weight-init so a fresh-random baseline reads ~ln(V)/ppl≈vocab). Three TODOs (concept→TODO→check):
+`chapters/chapter-7-evaluation/evaluation.ipynb` (17 cells, authored this session). The "stop eyeballing, start measuring" chapter — foundation for the rest of the arc. **Imports the model from `llmscratch`** (first chapter to do so; this is what fixed the `modern.pt` load bug — the package's names match the checkpoint). Three TODOs (concept→TODO→check):
 - `evaluate_perplexity` — mean held-out CE loss + `exp(loss)`. Caveat baked in: prior chapters trained on the whole cache, so the tail-slice "val" isn't strictly held out — framed as method-not-number.
 - `choice_loglikelihood` — sum of `log P(choice token | preceding)`; the basis of how base models are benchmarked (ARC/HellaSwag/MMLU). `evaluate_mc` (given) length-normalizes and picks argmax over choices; ships a tiny hand-written easy-MCQ `BENCH` + a comment on loading real `ai2_arc`.
 - `filter_logits` — temperature/top_k/**top_p (nucleus)**/**min_p**/**repetition_penalty** as one logit filter; `sample_next` = softmax+multinomial; a `generate_with` comparison cell shows the same prompt under 6 decoders with a distinct-2 repetition metric (the fix for the "AC AC AC" loops).

@@ -32,4 +32,6 @@ Setup phase. Chapters are being added incrementally as the journey is mapped out
 
 ## How to use this repo
 
-Each chapter will live in its own folder with notes, exercises, and code. Progress is tracked here in the README as chapters are completed.
+Each chapter lives in its own folder with notes, exercises, and code. Progress is tracked here in the README as chapters are completed.
+
+From Chapter 7 on, the settled building blocks (the Llama model, data/training utilities) live in the shared **`llmscratch`** package at the repo root, so later chapters `import` them instead of re-pasting. Run `pip install -e .` once to import it anywhere (the notebooks also bootstrap `sys.path` automatically if you don't). Chapters that *teach* a component still implement it inline — the package is for reuse.

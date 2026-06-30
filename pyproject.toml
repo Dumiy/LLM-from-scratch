@@ -1,0 +1,13 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "llmscratch"
+version = "0.1.0"
+description = "Shared building blocks for the LLM-from-scratch chapters"
+requires-python = ">=3.10"
+dependencies = ["torch>=2.6", "numpy"]
+
+[tool.setuptools.packages.find]
+include = ["llmscratch*"]
