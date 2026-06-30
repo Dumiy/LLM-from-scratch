@@ -148,6 +148,25 @@ Given: Ch.4 dense pieces (RoPE/RMSNorm/SwiGLU-as-expert/repeat_kv), the `MoE` la
 
 **Note on `torch.compile` for MoE:** left OFF in the run cell — the per-expert dispatch loop is data-dependent (`nonzero`/`index_add_`) so compile/inductor helps little and can graph-break. Dense chapters keep compile on; MoE doesn't.
 
+## Planned arc — Chapters 7-10 (user asked for "all the above")
+
+When asked what Ch.7 should be, the user picked **all four** remaining topics. Treating it as a 4-chapter arc, built one per turn in dependency order:
+1. **Ch.7 — Evaluation + decoding** (DONE this session) — measurement first, so the rest is measurable.
+2. **Ch.8 — DPO** (preference tuning): completes pretrain→SFT→DPO; measure the gain with Ch.7's harness.
+3. **Ch.9 — Multilingual + tokenizer**: the last handoff end goal; opens the tokenizer black box; per-language slices through Ch.4's mixture loader; measure per-language perplexity.
+4. **Ch.10 — Quantization + efficient inference**: deployment capstone (int8/int4, KV-cache math); use perplexity to prove quality barely moves.
+
+## What's done — Chapter 7: Evaluation + decoding
+
+`chapters/chapter-7-evaluation/evaluation.ipynb` (17 cells, authored this session). The "stop eyeballing, start measuring" chapter — foundation for the rest of the arc. Loads the Ch.4 `modern.pt` (LlamaGPT reproduced given, now WITH a 0.02 weight-init so a fresh-random baseline reads ~ln(V)/ppl≈vocab). Three TODOs (concept→TODO→check):
+- `evaluate_perplexity` — mean held-out CE loss + `exp(loss)`. Caveat baked in: prior chapters trained on the whole cache, so the tail-slice "val" isn't strictly held out — framed as method-not-number.
+- `choice_loglikelihood` — sum of `log P(choice token | preceding)`; the basis of how base models are benchmarked (ARC/HellaSwag/MMLU). `evaluate_mc` (given) length-normalizes and picks argmax over choices; ships a tiny hand-written easy-MCQ `BENCH` + a comment on loading real `ai2_arc`.
+- `filter_logits` — temperature/top_k/**top_p (nucleus)**/**min_p**/**repetition_penalty** as one logit filter; `sample_next` = softmax+multinomial; a `generate_with` comparison cell shows the same prompt under 6 decoders with a distinct-2 repetition metric (the fix for the "AC AC AC" loops).
+
+**Verified this session:** all checks pass with reference solutions (throwaway `validate_ch7.py`) — perplexity==exp(loss) and trained≪random (random ≈ ppl 51k ≈ vocab), loglikelihood matches a manual full-sequence gather, and each logit filter behaves (rep-penalty lowers seen-token logits, top_p keeps the nucleus, min_p floors vs the top, top_k keeps exactly k).
+
+**Status:** authored + internally verified, **not yet run by the user**. Needs `modern.pt` (exists) + any token cache. Honest framing throughout: a 50M base scores near random on harder MC items — stated as expected, not broken. Built via stdlib-json builder + cell-id pass; nbformat-validated.
+
 ## Dataset research (done, not yet acted on)
 
 Researched what it'd take to train locally toward: multilingual + function-calling/agentic capability. Full writeup is in conversation history; summary:
